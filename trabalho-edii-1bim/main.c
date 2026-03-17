@@ -150,3 +150,81 @@ void liberarArvore(NoArvore *no) {
     }
     free(no);
 }
+
+void lerRegistro(FILE *fp, long offset, char *nome, char *telefone) {
+    char linha[200];
+    
+    fseek(fp, offset, SEEK_SET);
+    
+    fgets(linha, sizeof(linha), fp);
+    
+    fgets(nome, 100, fp);
+    nome[strcspn(nome, "\n")] = 0;
+    
+    fgets(telefone, 20, fp);
+    telefone[strcspn(telefone, "\n")] = 0;
+}
+
+long adicionarRegistro(FILE *fp, int matricula, char *nome, char *telefone) {
+    long offset;
+    
+    fseek(fp, 0, SEEK_END);
+    offset = ftell(fp);
+    
+    fprintf(fp, "%d\n", matricula);
+    fprintf(fp, "%s\n", nome);
+    fprintf(fp, "%s\n", telefone);
+    fflush(fp);
+    
+    return offset;
+}
+
+void percursoPreOrdem(NoArvore *no, FILE *fp) {
+    if (no == NULL) return;
+    
+    fprintf(fp, "No: ");
+    for (int i = 0; i < no->nroChaves; i++) {
+        fprintf(fp, "(matricula=%d, offset=%ld)", no->chaves[i].matricula, no->chaves[i].offset);
+        if (i < no->nroChaves - 1) fprintf(fp, " | ");
+    }
+    fprintf(fp, "\n");
+    
+    if (!no->folha) {
+        for (int i = 0; i <= no->nroChaves; i++) {
+            percursoPreOrdem(no->filhos[i], fp);
+        }
+    }
+}
+
+int lerArquivoRegistros(FILE *fp, ArvoreB *arvore) {
+    char linha[200];
+    int count = 0;
+    
+    rewind(fp);
+    
+    while (fgets(linha, sizeof(linha), fp) != NULL) {
+        int matricula;
+        if (sscanf(linha, "%d", &matricula) == 1) {
+            char nome[100];
+            char telefone[20];
+            long offsetAtual = ftell(fp) - strlen(linha);
+            
+            if (fgets(nome, sizeof(nome), fp) != NULL) {
+                nome[strcspn(nome, "\n")] = 0;
+            }
+            
+            if (fgets(telefone, sizeof(telefone), fp) != NULL) {
+                telefone[strcspn(telefone, "\n")] = 0;
+            }
+            
+            Registro reg;
+            reg.matricula = matricula;
+            reg.offset = offsetAtual;
+            
+            inserir(arvore, reg);
+            count++;
+        }
+    }
+    
+    return count;
+}
